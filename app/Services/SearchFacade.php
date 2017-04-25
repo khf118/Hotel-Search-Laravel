@@ -1,6 +1,6 @@
 <?php
 
-namespace App;
+namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
 
@@ -14,14 +14,19 @@ class SearchFacade
 
     protected $result= [];
     protected $_destination, $_checkin, $_checkout, $_guests, $_suppliers;
-
+    public function __construct($_destination, $_checkin, $_checkout, $_guests) {
+        $this->_destination= $_destination;
+        $this->_checkout= $_checkout;
+        $this->_checkin= $_checkin;
+        $this->_guests= $_guests;
+    }
 
     public function getSupplierUrl($supplier) {
-        return $this->$suppliers[$supplier];
+        return $this->suppliers[$supplier];
     }
     public function fetchSupplier($supplier,$params) {
         $ch = curl_init(); 
-        curl_setopt($ch, CURLOPT_URL, $this->getSupplirUrl($supplier)); 
+        curl_setopt($ch, CURLOPT_URL, $this->getSupplierUrl($supplier)); 
         //return the transfer as a string 
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); 
         // $output contains the output string 
@@ -31,28 +36,31 @@ class SearchFacade
         return json_decode($output);
     }
 
-    public function fetchMulipleSuppliers($suppliers, $params = null) {
-
+    public function fetchMulipleSuppliers($suppliers = null, $params = null) {
+        //Fetch from all suppliers if the users didn't submit the requested suppliers
+        if (empty($suppliers)) {
+            $suppliers= array_keys($this->suppliers);
+        }
         //Check if we already have the results in cache
         if (Cache::has($this->_destination.$this->_checkin.$this->_checkout.$this->_guests)) {
-            return Cache::get($cache_key);
+            return Cache::get($this->_destination.$this->_checkin.$this->_checkout.$this->_guests);
         } 
         //otherwise iterate through the suppliers and retrieve one by one
         foreach ($suppliers as $key => $supplier) {
             $output= $this->fetchSupplier($supplier,$params);
-            $this->appendResults($output);
+            $this->appendResults($output,$supplier);
         }
 
         //cleanup the output by removing the keys
-        $this->results= array_values($this->results);
+        $this->result= array_values($this->result);
 
         //save the result in cache
         Cache::add($this->_destination.$this->_checkin.$this->_checkout.$this->_guests, json_encode($this->result), 5);
 
-        return $this->results;
+        return $this->result;
     }
 
-    public function appendResults($output) {
+    public function appendResults($output,$supplier) {
         //Iterate through the supplier results
         foreach ($output as $key => $value) {
             //if we have a new item or another offer with a better price, we save the item
