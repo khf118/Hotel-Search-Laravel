@@ -3,7 +3,7 @@
 1. Install Composer
 1. Run Composer install in the root repository directory to install dependencies
 
-Here's the main files:
+Here are the main files:
 
 * Router: /routes/api.php
 * Controller: app/Http/Controllers/SearchController.php
